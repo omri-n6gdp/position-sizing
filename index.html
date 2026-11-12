@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Risk & Position Sizing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root{--bg:#0b0d12;--card:#141821;--line:#232a36;--ink:#eef2f8;--muted:#8a93a3;--faint:#586172;
+    --long:#2fd98a;--short:#ff5d6c;--accent:#5ad1ff;--gold:#ffcf4d;--warn:#ffae3c;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:26px 22px 70px}
+  h1{font-weight:700;font-size:25px}h1 b{color:var(--accent)}
+  header p{color:var(--muted);font-size:13px;margin:4px 0 22px}
+  .mono{font-family:'IBM Plex Mono',monospace}
+  .layout{display:grid;grid-template-columns:330px 1fr;gap:22px;align-items:start}
+  @media(max-width:920px){.layout{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:18px}
+  .card h2{font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:var(--faint);margin-bottom:16px;font-weight:600}
+  .fld{margin-bottom:14px}
+  .fld label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+  .fld .ig{display:flex;align-items:center;background:#0d1118;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .fld .ig span{padding:0 11px;color:var(--faint);font-family:'IBM Plex Mono';font-size:14px}
+  .fld input{flex:1;background:none;border:none;padding:11px 11px 11px 0;color:var(--ink);font-family:'IBM Plex Mono';font-size:15px;outline:none}
+  .fld input:focus{color:var(--accent)}
+  .ls{display:flex;background:#0d1118;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-bottom:16px}
+  .ls button{flex:1;border:none;background:none;color:var(--muted);padding:11px;cursor:pointer;font-family:inherit;font-weight:600;font-size:14px}
+  .ls button.long.on{background:var(--long);color:#04140a}.ls button.short.on{background:var(--short);color:#1a0407}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .out{background:#0d1118;border:1px solid var(--line);border-radius:11px;padding:15px}
+  .out .l{font-size:10.5px;letter-spacing:1px;text-transform:uppercase;color:var(--faint)}
+  .out .v{font-family:'IBM Plex Mono';font-size:24px;font-weight:600;margin-top:5px;color:var(--ink)}
+  .out .v.accent{color:var(--accent)}.out .v.long{color:var(--long)}.out .v.short{color:var(--short)}.out .v.gold{color:var(--gold)}
+  .out .s{font-size:11.5px;color:var(--muted);margin-top:4px;font-family:'IBM Plex Mono'}
+  .levels{position:relative;height:90px;margin:24px 0 8px}
+  .levels .track{position:absolute;left:0;right:0;top:44px;height:4px;background:#222a36;border-radius:3px}
+  .levels .fill{position:absolute;top:44px;height:4px;border-radius:3px}
+  .levels .mark{position:absolute;top:30px;transform:translateX(-50%);text-align:center}
+  .levels .mark .dot{width:12px;height:12px;border-radius:50%;margin:0 auto 6px;border:2px solid #0b0d12}
+  .levels .mark .lab{font-size:10px;color:var(--faint);text-transform:uppercase;letter-spacing:0.5px}
+  .levels .mark .pr{font-family:'IBM Plex Mono';font-size:13px;color:var(--ink);margin-top:2px}
+  .kelly-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
+  .kelly-row:last-child{border:none}.kelly-row .k{color:var(--muted)}.kelly-row .v{font-family:'IBM Plex Mono';font-weight:600}
+  .badge{font-size:11px;padding:3px 9px;border-radius:20px;font-weight:600;margin-left:8px}
+  .warnbox{background:rgba(255,174,60,0.1);border:1px solid rgba(255,174,60,0.3);border-radius:10px;padding:11px 13px;font-size:12.5px;color:var(--warn);margin-top:12px;display:none}
+  .warnbox.show{display:block}
+  .note{font-size:11.5px;color:var(--faint);line-height:1.55;margin-top:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Risk &amp; <b>Position Sizing</b></h1>
+    <p>Size every trade by the risk you'll accept, not a gut feeling. Stop/size math, R-multiples, and the Kelly criterion — built for your Liquid trades.</p>
+  </header>
+  <div class="layout">
+    <div>
+      <div class="card">
+        <h2>Trade Setup</h2>
+        <div class="ls" id="ls"><button class="long on" data-d="long">▲ Long</button><button class="short" data-d="short">▼ Short</button></div>
+        <div class="fld"><label>Account size</label><div class="ig"><span>£</span><input id="acct" type="number" value="5000"></div></div>
+        <div class="fld"><label>Risk per trade</label><div class="ig"><input id="riskp" type="number" value="1" step="0.25" style="padding-left:11px"><span>%</span></div></div>
+        <div class="grid2">
+          <div class="fld"><label>Entry price</label><div class="ig"><span>£</span><input id="entry" type="number" value="100" step="0.01"></div></div>
+          <div class="fld"><label>Stop price</label><div class="ig"><span>£</span><input id="stop" type="number" value="95" step="0.01"></div></div>
+        </div>
+        <div class="fld"><label>Target price (optional)</label><div class="ig"><span>£</span><input id="target" type="number" value="115" step="0.01"></div></div>
+      </div>
+      <div class="card">
+        <h2>Edge (for Kelly)</h2>
+        <div class="fld"><label>Win rate</label><div class="ig"><input id="wr" type="number" value="45" step="1" style="padding-left:11px"><span>%</span></div></div>
+        <div class="fld"><label>Avg win : avg loss (payoff ratio)</label><div class="ig"><input id="payoff" type="number" value="2" step="0.1" style="padding-left:11px"><span>: 1</span></div></div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <h2>Position</h2>
+        <div class="grid2" style="gap:14px">
+          <div class="out"><div class="l">Risk amount</div><div class="v gold" id="oRisk">—</div><div class="s" id="oRiskS"></div></div>
+          <div class="out"><div class="l">Stop distance</div><div class="v" id="oStop">—</div><div class="s" id="oStopS"></div></div>
+          <div class="out"><div class="l">Position size</div><div class="v accent" id="oUnits">—</div><div class="s" id="oUnitsS"></div></div>
+          <div class="out"><div class="l">Leverage used</div><div class="v" id="oLev">—</div><div class="s">position ÷ account</div></div>
+        </div>
+        <div class="warnbox" id="warn"></div>
+        <div class="levels" id="levels"></div>
+      </div>
+      <div class="card">
+        <h2>Trade Quality</h2>
+        <div class="grid2" style="gap:14px">
+          <div class="out"><div class="l">Reward : Risk</div><div class="v" id="oRR">—</div><div class="s" id="oRRS"></div></div>
+          <div class="out"><div class="l">If target hit</div><div class="v long" id="oWin">—</div><div class="s">profit</div></div>
+          <div class="out"><div class="l">If stopped out</div><div class="v short" id="oLoss">—</div><div class="s">loss</div></div>
+          <div class="out"><div class="l">Breakeven win rate</div><div class="v" id="oBE">—</div><div class="s">for this R:R</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Kelly Criterion</h2>
+        <div class="kelly-row"><span class="k">Expectancy per trade</span><span class="v" id="kExp">—</span></div>
+        <div class="kelly-row"><span class="k">Full Kelly</span><span class="v" id="kFull">—</span></div>
+        <div class="kelly-row"><span class="k">Half Kelly (recommended)</span><span class="v" id="kHalf">—</span></div>
+        <div class="kelly-row"><span class="k">Your chosen risk vs Kelly</span><span class="v" id="kCmp">—</span></div>
+        <div class="note">Kelly: f* = W − (1−W)/R, where W = win rate and R = payoff ratio. It maximises long-run growth but is volatile — most traders use a fraction of it. Negative Kelly means no edge: don't take the trade.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  let dir="long";
+  const gbp=n=>"£"+Math.abs(n).toLocaleString("en-GB",{maximumFractionDigits:2});
+  function run(){
+    const acct=+$("acct").value||0, riskp=+$("riskp").value||0, entry=+$("entry").value||0,
+      stop=+$("stop").value||0, target=+$("target").value||0, wr=(+$("wr").value||0)/100, payoff=+$("payoff").value||0;
+    const riskAmt=acct*riskp/100;
+    const stopDist=Math.abs(entry-stop);
+    const stopPct=entry?stopDist/entry*100:0;
+    const units=stopDist>0?riskAmt/stopDist:0;
+    const posVal=units*entry;
+    const lev=acct>0?posVal/acct:0;
+    $("oRisk").textContent=gbp(riskAmt);$("oRiskS").textContent=riskp+"% of "+gbp(acct);
+    $("oStop").textContent=gbp(stopDist);$("oStopS").textContent=stopPct.toFixed(2)+"% from entry";
+    $("oUnits").textContent=units.toLocaleString("en-GB",{maximumFractionDigits:units<10?3:0})+" units";
+    $("oUnitsS").textContent="≈ "+gbp(posVal)+" position";
+    $("oLev").textContent=lev.toFixed(2)+"×";
+    $("oLev").className="v "+(lev>5?"short":lev>2?"gold":"long");
+    // direction sanity warning
+    const w=$("warn");let msg="";
+    if(dir==="long"&&stop>=entry)msg="For a long, your stop should be BELOW entry.";
+    else if(dir==="short"&&stop<=entry)msg="For a short, your stop should be ABOVE entry.";
+    else if(lev>10)msg="Leverage "+lev.toFixed(1)+"× is very high — a small adverse move liquidates the position.";
+    w.className="warnbox"+(msg?" show":"");w.textContent="⚠ "+msg;
+    // quality
+    const rDist=target?Math.abs(target-entry):0;
+    const rr=stopDist>0&&rDist>0?rDist/stopDist:0;
+    $("oRR").textContent=rr?rr.toFixed(2)+" : 1":"—";$("oRR").className="v "+(rr>=2?"long":rr>=1?"gold":"short");
+    $("oRRS").textContent=rr?(rr>=2?"healthy":rr>=1?"thin":"poor"):"set a target";
+    $("oWin").textContent=rDist?"+"+gbp(units*rDist):"—";
+    $("oLoss").textContent="−"+gbp(riskAmt);
+    const be=rr?1/(1+rr)*100:0;$("oBE").textContent=rr?be.toFixed(0)+"%":"—";
+    // levels viz
+    drawLevels(entry,stop,target);
+    // kelly
+    const R=payoff;const f=wr-(1-wr)/ (R||1e9);
+    const exp=wr*R-(1-wr); // in R units
+    $("kExp").textContent=(exp>=0?"+":"")+exp.toFixed(2)+" R";
+    $("kExp").style.color=exp>=0?"var(--long)":"var(--short)";
+    if(f>0){$("kFull").textContent=(f*100).toFixed(1)+"%";$("kHalf").textContent=(f*50).toFixed(1)+"%";
+      $("kFull").style.color="var(--ink)";$("kHalf").style.color="var(--long)";
+      const ratio=riskp/(f*100);
+      $("kCmp").innerHTML=(riskp).toFixed(2)+"% = "+(riskp/(f*100)).toFixed(2)+"× full Kelly"+
+        (riskp>f*100?'<span class="badge" style="background:rgba(255,93,108,0.15);color:var(--short)">over-betting</span>':
+         riskp<=f*50?'<span class="badge" style="background:rgba(47,217,138,0.15);color:var(--long)">conservative</span>':
+         '<span class="badge" style="background:rgba(255,207,77,0.15);color:var(--gold)">aggressive</span>');
+    }else{$("kFull").textContent="—";$("kHalf").textContent="—";$("kCmp").innerHTML='<span style="color:var(--short)">no edge — skip it</span>';
+      $("kFull").style.color="var(--short)";}
+  }
+  function drawLevels(entry,stop,target){
+    const vals=[entry,stop,target].filter(v=>v>0);if(vals.length<2){$("levels").innerHTML="";return;}
+    const lo=Math.min(...vals),hi=Math.max(...vals);const pad=(hi-lo)*0.15||1;const a=lo-pad,b=hi+pad;
+    const P=v=>(v-a)/(b-a)*100;
+    const eP=P(entry),sP=P(stop),tP=target?P(target):null;
+    const profitCol=dir==="long"?"var(--long)":"var(--short)";
+    let fills="";
+    fills+=`<div class="fill" style="left:${Math.min(eP,sP)}%;width:${Math.abs(eP-sP)}%;background:var(--short);opacity:0.5"></div>`;
+    if(tP!=null)fills+=`<div class="fill" style="left:${Math.min(eP,tP)}%;width:${Math.abs(eP-tP)}%;background:var(--long);opacity:0.45"></div>`;
+    const mk=(p,col,lab,pr)=>`<div class="mark" style="left:${p}%"><div class="dot" style="background:${col}"></div><div class="lab">${lab}</div><div class="pr">£${pr}</div></div>`;
+    $("levels").innerHTML=`<div class="track"></div>${fills}`+
+      mk(sP,"var(--short)","Stop",stop)+mk(eP,"var(--accent)","Entry",entry)+(tP!=null?mk(tP,"var(--long)","Target",target):"");
+  }
+  document.querySelectorAll("#ls button").forEach(b=>b.onclick=()=>{dir=b.dataset.d;
+    document.querySelectorAll("#ls button").forEach(x=>x.classList.toggle("on",x===b));run();});
+  document.querySelectorAll("input").forEach(i=>i.addEventListener("input",run));
+  run();
+})();
+</script>
+</body>
+</html>
