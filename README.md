@@ -1,5 +1,7 @@
 # Risk & Position Sizing
 
+**▶ Try it online: [https://omri-n6gdp.github.io/position-sizing/](https://omri-n6gdp.github.io/position-sizing/)** (works on phones too)
+
 Trade risk and position-size calculator with stop/target visualisation.
 
 ## How to use
